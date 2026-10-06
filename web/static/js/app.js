@@ -1,15 +1,21 @@
 // AutoShorts AI Dashboard Frontend Logic
 
+let isVercelEnvironment = false;
+
 document.addEventListener("DOMContentLoaded", () => {
     initNavigation();
     initSystemStatus();
     initGenerateForm();
     loadGallery();
     initSettingsForm();
+    loadGitHubRuns();
+
+    const refreshRunsBtn = document.getElementById("refresh-runs-btn");
+    if (refreshRunsBtn) refreshRunsBtn.onclick = loadGitHubRuns;
 });
 
 // Toast notification helper
-function showToast(message, duration = 3000) {
+function showToast(message, duration = 3500) {
     const toast = document.getElementById("toast");
     toast.textContent = message;
     toast.classList.add("show");
@@ -36,6 +42,8 @@ function initNavigation() {
 
             if (tabId === "library") {
                 loadGallery();
+            } else if (tabId === "scheduler") {
+                loadGitHubRuns();
             }
         });
     });
@@ -49,6 +57,24 @@ async function initSystemStatus() {
         
         const geminiDot = document.getElementById("gemini-status-dot");
         const geminiText = document.getElementById("gemini-status-text");
+
+        if (data.is_vercel) {
+            isVercelEnvironment = true;
+            geminiDot.className = "status-dot green";
+            geminiText.textContent = "Cloud Mode";
+
+            const ytStatusBox = document.getElementById("youtube-connection-status");
+            if (ytStatusBox) {
+                if (data.github_configured) {
+                    ytStatusBox.className = "alert-box success-box";
+                    ytStatusBox.innerHTML = `<strong>&#10004; GitHub Connected:</strong> ${data.repo_owner}/${data.repo_name} &rarr; Actions dispatch ready.`;
+                } else {
+                    ytStatusBox.className = "alert-box info-box";
+                    ytStatusBox.innerHTML = "<strong>Notice:</strong> Add <code>GITHUB_PAT</code>, <code>GITHUB_OWNER</code>, and <code>GITHUB_REPO</code> to your Vercel Environment Variables.";
+                }
+            }
+            return;
+        }
 
         if (data.gemini_configured) {
             geminiDot.className = "status-dot green";
@@ -73,6 +99,57 @@ async function initSystemStatus() {
     }
 }
 
+// GitHub Actions Runs loader
+async function loadGitHubRuns() {
+    const container = document.getElementById("github-runs-container");
+    if (!container) return;
+
+    try {
+        const res = await fetch("/api/runs");
+        const data = await res.json();
+
+        if (!data.configured) {
+            container.innerHTML = `
+                <div class="alert-box info-box" style="margin: 0; font-size: 0.85rem;">
+                    ${data.message || "Set GITHUB_PAT, GITHUB_OWNER, and GITHUB_REPO in Vercel to link GitHub Actions."}
+                </div>
+            `;
+            return;
+        }
+
+        if (!data.runs || data.runs.length === 0) {
+            container.innerHTML = `<div class="empty-state" style="padding: 1rem;"><p>No workflow runs triggered yet.</p></div>`;
+            return;
+        }
+
+        container.innerHTML = data.runs.map(r => {
+            const isSuccess = r.conclusion === "success";
+            const isProgress = r.status === "in_progress" || r.status === "queued";
+            const statusClass = isSuccess ? "green" : (isProgress ? "yellow" : "red");
+            const statusLabel = r.conclusion || r.status;
+            const dateStr = new Date(r.created_at).toLocaleString();
+
+            return `
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span class="status-dot ${statusClass}"></span>
+                        <div>
+                            <div style="font-weight: 500; font-size: 0.88rem;">${r.name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">${dateStr}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <span style="font-size: 0.75rem; text-transform: uppercase; font-family: monospace; color: var(--text-muted);">${statusLabel}</span>
+                        <a href="${r.html_url}" target="_blank" class="btn-secondary" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; text-decoration: none;">View Run &rarr;</a>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    } catch (e) {
+        container.innerHTML = `<div class="alert-box error-box" style="margin: 0; font-size: 0.85rem;">Error loading workflow runs: ${e.message}</div>`;
+    }
+}
+
 // Video Generation
 let currentProgressPoll = null;
 
@@ -92,7 +169,52 @@ function initGenerateForm() {
         const visual_style = document.getElementById("style-select").value;
         const auto_upload = document.getElementById("auto-upload-check").checked;
 
-        // UI switch to progress state
+        // Vercel Serverless Mode: Dispatch directly to GitHub Actions
+        if (isVercelEnvironment) {
+            idlePreview.style.display = "none";
+            progressContainer.style.display = "none";
+            startBtn.disabled = true;
+            startBtn.innerHTML = `<span>Dispatching to GitHub Actions...</span>`;
+
+            try {
+                const response = await fetch("/api/trigger", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ niche, auto_upload })
+                });
+                const data = await response.json();
+
+                idlePreview.style.display = "block";
+                startBtn.disabled = false;
+                startBtn.innerHTML = `<span>1-Click Generate & Render Short</span>`;
+
+                if (data.success) {
+                    showToast("🚀 Workflow dispatched on GitHub Actions!");
+                    idlePreview.innerHTML = `
+                        <div class="empty-icon" style="color: var(--accent);">&#10004;</div>
+                        <h3>Production Started on GitHub Actions!</h3>
+                        <p style="margin-top: 0.5rem; color: var(--text-muted);">${data.message}</p>
+                        <p style="margin-top: 0.4rem; font-size: 0.85rem; color: var(--text-muted);">Your video will be generated with FFmpeg and Edge-TTS in GitHub's cloud in ~1.5 minutes.</p>
+                        <p style="margin-top: 1.2rem;">
+                            <a href="https://github.com/harshithphtlt-crypto/youtube/actions" target="_blank" class="primary-btn" style="display: inline-block; text-decoration: none; padding: 0.6rem 1.2rem;">
+                                View Live Run in GitHub Actions &rarr;
+                            </a>
+                        </p>
+                    `;
+                    setTimeout(loadGitHubRuns, 1500);
+                } else {
+                    showToast(data.message || "Failed to trigger workflow");
+                }
+            } catch (err) {
+                idlePreview.style.display = "block";
+                startBtn.disabled = false;
+                startBtn.innerHTML = `<span>1-Click Generate & Render Short</span>`;
+                showToast("Dispatch error: " + err.message);
+            }
+            return;
+        }
+
+        // Local Server Mode
         idlePreview.style.display = "none";
         resultContainer.style.display = "none";
         progressContainer.style.display = "flex";

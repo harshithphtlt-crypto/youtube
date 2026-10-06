@@ -4,17 +4,26 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler
 
 class handler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.end_headers()
+
     def do_GET(self):
         github_token = os.environ.get("GITHUB_PAT", "")
-        repo_owner = os.environ.get("GITHUB_OWNER", "")
-        repo_name = os.environ.get("GITHUB_REPO", "")
+        repo_owner = os.environ.get("GITHUB_OWNER", "harshithphtlt-crypto")
+        repo_name = os.environ.get("GITHUB_REPO", "youtube")
 
         if not github_token or not repo_owner or not repo_name:
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(json.dumps({
                 "configured": False,
+                "message": "GITHUB_PAT, GITHUB_OWNER, and GITHUB_REPO are not configured in Vercel environment variables.",
                 "runs": []
             }).encode("utf-8"))
             return
@@ -42,6 +51,7 @@ class handler(BaseHTTPRequestHandler):
                     })
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
                 self.wfile.write(json.dumps({
                     "configured": True,
@@ -50,5 +60,6 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(json.dumps({"configured": False, "error": str(e), "runs": []}).encode("utf-8"))

@@ -82,9 +82,12 @@
                             <div class="form-group">
                                 <label for="niche-select">1. Select Target Niche</label>
                                 <select id="niche-select" class="form-control">
-                                    {% for name, item in niches.items() %}
-                                    <option value="{{ name }}">{{ name }} ({{ item.tone }})</option>
-                                    {% endfor %}
+                                    <option value="Psychology Facts" selected>Psychology Facts (mysterious, urgent, deeply insightful)</option>
+                                    <option value="Dark History">Dark History (suspenseful, storytelling, dramatic)</option>
+                                    <option value="Mind-Blowing Science">Mind-Blowing Science (wonder, fast-paced, mind-expanding)</option>
+                                    <option value="Stoicism & Philosophy">Stoicism & Philosophy (stoic, grounded, commanding, inspiring)</option>
+                                    <option value="Tech & AI Secrets">Tech & AI Secrets (high energy, futuristic, urgent)</option>
+                                    <option value="Unsolved Mysteries">Unsolved Mysteries (haunting, investigative, cliffhanger)</option>
                                 </select>
                                 <small class="form-hint" id="niche-description">Mind-bending psychological tricks, human behavior secrets, and dark psychology.</small>
                             </div>
@@ -98,17 +101,22 @@
                                 <div class="form-group">
                                     <label for="voice-select">3. Voiceover Actor</label>
                                     <select id="voice-select" class="form-control">
-                                        {% for v_id, v_info in voices.items() %}
-                                        <option value="{{ v_id }}">{{ v_info.label }}</option>
-                                        {% endfor %}
+                                        <option value="en-US-ChristopherNeural" selected>Christopher (Deep Cinematic Male - Recommended)</option>
+                                        <option value="en-US-GuyNeural">Guy (Casual & Energetic Male)</option>
+                                        <option value="en-US-JennyNeural">Jenny (Expressive & Clear Female)</option>
+                                        <option value="en-US-AriaNeural">Aria (Confident & Engaging Female)</option>
+                                        <option value="en-GB-RyanNeural">Ryan (Deep British Documentary Male)</option>
+                                        <option value="en-US-EricNeural">Eric (Authoritative Deep Male)</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
                                     <label for="style-select">4. Visual Art Aesthetic</label>
                                     <select id="style-select" class="form-control">
-                                        {% for s_id, s_desc in styles.items() %}
-                                        <option value="{{ s_id }}">{{ s_id.replace('_', ' ').title() }}</option>
-                                        {% endfor %}
+                                        <option value="cinematic_dark" selected>Cinematic Dark</option>
+                                        <option value="vintage_documentary">Vintage Documentary</option>
+                                        <option value="photorealistic">Photorealistic</option>
+                                        <option value="cyberpunk_neon">Cyberpunk Neon</option>
+                                        <option value="surreal_artistic">Surreal Artistic</option>
                                     </select>
                                 </div>
                             </div>
@@ -235,15 +243,29 @@
                         <div class="form-group">
                             <label>Default Autopilot Niche</label>
                             <select id="cron-niche" class="form-control">
-                                {% for name in niches.keys() %}
-                                <option value="{{ name }}">{{ name }}</option>
-                                {% endfor %}
+                                <option value="Psychology Facts" selected>Psychology Facts</option>
+                                <option value="Dark History">Dark History</option>
+                                <option value="Mind-Blowing Science">Mind-Blowing Science</option>
+                                <option value="Stoicism & Philosophy">Stoicism & Philosophy</option>
+                                <option value="Tech & AI Secrets">Tech & AI Secrets</option>
+                                <option value="Unsolved Mysteries">Unsolved Mysteries</option>
                             </select>
                         </div>
                     </div>
 
-                    <div class="cron-status-card">
-                        <h4>Autopilot CLI Cron Command:</h4>
+                    <div class="cron-status-card" style="margin-top: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <h4>GitHub Actions 3x Daily Autopilot Runs:</h4>
+                            <button id="refresh-runs-btn" class="btn-secondary" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">Refresh Runs</button>
+                        </div>
+                        <p class="form-hint" style="margin-bottom: 0.8rem;">Runs automatically at 08:00 UTC, 14:00 UTC, and 20:00 UTC via GitHub Actions.</p>
+                        <div id="github-runs-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div class="empty-state" style="padding: 1rem;"><p>Loading recent autopilot workflow runs...</p></div>
+                        </div>
+                    </div>
+
+                    <div class="cron-status-card" style="margin-top: 1.5rem;">
+                        <h4>Local CLI Cron Command:</h4>
                         <div class="code-box">
                             <code>python main.py --cron --frequency daily --niche "Psychology Facts" --auto-upload</code>
                             <button class="btn-copy" onclick="navigator.clipboard.writeText('python main.py --cron --frequency daily --niche &quot;Psychology Facts&quot; --auto-upload'); alert('Copied CLI cron command!');">Copy</button>
@@ -256,8 +278,8 @@
             <section id="tab-settings" class="tab-pane">
                 <header class="section-header">
                     <div>
-                        <h1 class="page-title">API Keys & YouTube Channel Setup</h1>
-                        <p class="page-subtitle">Configure your Gemini API key and YouTube OAuth credentials.</p>
+                        <h1 class="page-title">API Keys & Cloud Hosting Setup</h1>
+                        <p class="page-subtitle">Configure your Gemini API key, YouTube OAuth credentials, and Cloud deployment variables.</p>
                     </div>
                 </header>
 
@@ -298,6 +320,29 @@
 
                         <div id="youtube-connection-status" class="alert-box info-box" style="margin-top: 1.2rem;">
                             Checking YouTube credentials...
+                        </div>
+                    </div>
+
+                    <div class="card glass-card" style="grid-column: 1 / -1;">
+                        <h3>Vercel & GitHub Actions Cloud Variables</h3>
+                        <p>Required environment variables and secrets to link Vercel and GitHub Actions together:</p>
+                        <div class="setup-steps-list" style="margin-top: 1rem;">
+                            <div class="setup-step">
+                                <strong>GitHub Secrets:</strong> (Repository &rarr; Settings &rarr; Secrets and variables &rarr; Actions)
+                                <ul style="margin: 0.5rem 0 0 1.2rem; font-size: 0.88rem; color: var(--text-muted);">
+                                    <li><code>GEMINI_API_KEY</code> - Your Google Gemini AI Studio key (Required)</li>
+                                    <li><code>YOUTUBE_CLIENT_SECRETS_JSON</code> - Contents of your client_secrets.json (Optional for auto-upload)</li>
+                                    <li><code>YOUTUBE_TOKEN_JSON</code> - Contents of your authenticated token.json (Optional for auto-upload)</li>
+                                </ul>
+                            </div>
+                            <div class="setup-step">
+                                <strong>Vercel Environment Variables:</strong> (Project Settings &rarr; Environment Variables)
+                                <ul style="margin: 0.5rem 0 0 1.2rem; font-size: 0.88rem; color: var(--text-muted);">
+                                    <li><code>GITHUB_PAT</code> - Personal Access Token with repo/actions dispatch permissions</li>
+                                    <li><code>GITHUB_OWNER</code> - <code>harshithphtlt-crypto</code></li>
+                                    <li><code>GITHUB_REPO</code> - <code>youtube</code></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
